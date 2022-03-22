@@ -11,7 +11,8 @@ namespace ByteBank
 
         public static int TotalDeContasCriadas { get; private set; }
 
-
+        public int ContadorSaquesNaoPermitidos { get; private set; }
+        public int ContadorTranferenciasNaoPermitidas { get; private set; }
         public int Agencia { get; }
         public int Numero { get; }
        
@@ -51,22 +52,29 @@ namespace ByteBank
             Agencia = agencia;
             Numero = numero;
 
+            TotalDeContasCriadas++;
             TaxaOperacao = 30 / TotalDeContasCriadas;
 
-            TotalDeContasCriadas++;
+            
         }
 
 
-        public bool Sacar(double valor)
+        public void Sacar(double valor)
         {
-       
+            if (valor < 0)
+            {
+                throw new ArgumentException("Valor invalido para o saque.", nameof(valor));
+            }
+
             if (_saldo < valor)
             {
-                return false;
+                ContadorSaquesNaoPermitidos++;
+                throw new SaldoInsuficienteException(Saldo, valor);
+                
             }
 
             _saldo -= valor;
-            return true;
+           
         }
 
         public void Depositar(double valor)
@@ -75,16 +83,25 @@ namespace ByteBank
         }
 
 
-        public bool Transferir(double valor, ContaCorrente contaDestino)
+        public void Transferir(double valor, ContaCorrente contaDestino)
         {
-            if (_saldo < valor)
+            if (valor < 0)
             {
-                return false;
+                throw new ArgumentException("Valor invalido para a tranferencia.", nameof(valor));
             }
 
-            _saldo -= valor;
+            try
+            {
+                Sacar(valor);
+            }
+            catch (SaldoInsuficienteException ex)
+            {
+                ContadorTranferenciasNaoPermitidas++;
+                throw new OperacaoFinanceiraException("Operacao nao realizada.", ex);
+            }
+           
             contaDestino.Depositar(valor);
-            return true;
+            
         }
     }
 }
